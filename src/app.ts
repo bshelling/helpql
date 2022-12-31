@@ -7,7 +7,7 @@ import * as readline from 'node:readline/promises'
 import { stdin as input, stdout as output } from 'node:process';
 import { resolve } from 'path'
 import * as csv from 'fast-csv'
-
+import * as emoj from 'node-emoji'
 
 const DEST_DIR = 'final_docs'
 const SRC_DIR = 'source'
@@ -45,10 +45,10 @@ const readandInitCSV = async () => {
         })).on('data', row =>  ws.write(row.toString()))
 
         ws.on('open',()=>{
-            console.log(`Processing ${filename} csv...`)
+            console.log(`${emoj.get('🕐')} Analyzing ${filename} csv...`)
         })
         csvFile.on('close',()=>{
-            console.log(`Processing ${filename} csv complete`)
+            console.log(`${emoj.get('✅')} Processing ${filename} csv to table complete`)
         })
     })
 
@@ -85,7 +85,7 @@ const getAnswers = async (input?:any) => {
 const run = async (msg:String) => {
     try {
         const res = await getAnswers(msg.toString())
-        console.log(`\n=======\n\nSQL Query: ${res}\n\n=======\n`)
+        console.log(`\n=======\n\nSQL Query: ${res}\n=======`)
     }
     catch(err){
         console.log(err)
@@ -93,9 +93,9 @@ const run = async (msg:String) => {
 }
 
 const rl = readline.createInterface({input,output})
-const answer = rl.question('Tell me how I should write this query? ').then(e => {
+const answer = rl.question(`${emoj.get('👨🏾‍💻')} Tell me how I should write this query? `).then(e => {
     run(e).then(response => {
-        console.log("\n")
+        console.log(`${emoj.get('😉')} Done!`)
         rl.close()
     })
 });
