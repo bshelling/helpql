@@ -26,17 +26,26 @@ const config = new Configuration({
 const readandInitCSV = async () => {
 
     if(resolve(DEST_DIR)){
+        // if the destination directory exists, remove it
         rmSync(DEST_DIR,{recursive: true})
     }
 
+    // make destination directory
     await mkdirSync(DEST_DIR)
     const files = await readdirSync(resolve(SRC_DIR))
     console.log("\n")
+
+
     files.map(e => {
+
+        // create the filename
         const filename = e.split('.')[0]
+
+        // create write/read streams
         const ws = createWriteStream(`${DEST_DIR}/${e}`)
         const csvFile = createReadStream(resolve(`${SRC_DIR}/${e}`))
 
+        // Read csv files, write top row columns to new files
         csvFile.setEncoding('utf8')
         csvFile.pipe(csv.parse({
             headers: false,
@@ -58,18 +67,24 @@ const getAnswers = async (input?:any) => {
 
     await readandInitCSV()
 
+    // get files from destination director
     let files = readdirSync(DEST_DIR)
 
+    // assign user input to prompt variable
     const messageInput = input
     let promptText = `${messageInput}\n\n`
 
+
     for(var i = 0; i < files.length; i++){
 
+        // Reformat filenames capitalize/concatenate and append to prompt text
+        // Read column values from files
         let capFilename = files[i].charAt(0).toUpperCase() + files[i].slice(1)
         promptText += `\nTable:${capFilename.split('.')[0]} Columns:[${readFileSync(`${DEST_DIR}/${files[i]}`).toString()}]`
 
     }
 
+    // Pass promptText variable to createCompletion `prompt` option
     const opai = new OpenAIApi(config)
     const req = await opai.createCompletion({
         model: OPEN_AI_MODEL,
@@ -92,6 +107,7 @@ const run = async (msg:String) => {
     }
 }
 
+// create cli user input interface
 const rl = readline.createInterface({input,output})
 const answer = rl.question(`${emoj.get('👨🏾‍💻')} Tell me how I should write this query? `).then(e => {
     run(e).then(response => {
