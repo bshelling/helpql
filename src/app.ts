@@ -92,9 +92,7 @@ const getAnswers = async (input?:any) => {
         max_tokens: 128,
         temperature: 0.2
     })
-
     return req.data.choices[0].text
-
 }
 
 const run = async (msg:String) => {
