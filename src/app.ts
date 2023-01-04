@@ -25,78 +25,96 @@ const config = new Configuration({
 
 const readandInitCSV = async () => {
 
-    if(resolve(DEST_DIR)){
-        // if the destination directory exists, remove it
-        rmSync(DEST_DIR,{recursive: true})
+    try {
+            // if the destination directory exists, remove it
+            await mkdirSync(DEST_DIR,{recursive: true})
+            const files = await readdirSync(resolve(SRC_DIR))
+
+            files.map(e => {
+
+                if(e != '.DS_Store'){
+                // create the filename
+                const filename = e.split('.')[0]
+
+                // create write/read streams
+                const ws = createWriteStream(`${DEST_DIR}/${e}`)
+                const csvFile = createReadStream(resolve(`${SRC_DIR}/${e}`))
+
+                // Read csv files, write top row columns to new files
+                csvFile.setEncoding('utf8')
+                csvFile.pipe(csv.parse({
+                    headers: false,
+                    maxRows: 1,
+                    trim: true
+                })).on('data', row =>  ws.write(row.toString()))
+
+                ws.on('open',(e)=>{
+
+                    console.log(`${emoj.get('🕐')} Analyzing ${filename} csv...`)
+                })
+                csvFile.on('close',()=>{
+                    console.log(`${emoj.get('✅')} Processing ${filename} csv to table complete`)
+                })
+                }
+            })
+
+
+
+    }
+    catch(error){
+        console.log(error)
     }
 
     // make destination directory
-    await mkdirSync(DEST_DIR)
-    const files = await readdirSync(resolve(SRC_DIR))
-    console.log("\n")
 
-
-    files.map(e => {
-
-        // create the filename
-        const filename = e.split('.')[0]
-
-        // create write/read streams
-        const ws = createWriteStream(`${DEST_DIR}/${e}`)
-        const csvFile = createReadStream(resolve(`${SRC_DIR}/${e}`))
-
-        // Read csv files, write top row columns to new files
-        csvFile.setEncoding('utf8')
-        csvFile.pipe(csv.parse({
-            headers: false,
-            maxRows: 1,
-            trim: true
-        })).on('data', row =>  ws.write(row.toString()))
-
-        ws.on('open',()=>{
-            console.log(`${emoj.get('🕐')} Analyzing ${filename} csv...`)
-        })
-        csvFile.on('close',()=>{
-            console.log(`${emoj.get('✅')} Processing ${filename} csv to table complete`)
-        })
-    })
 
 }
 
 const getAnswers = async (input?:any) => {
 
-    await readandInitCSV()
+    try {
+        await readandInitCSV()
 
-    // get files from destination director
-    let files = readdirSync(DEST_DIR)
+        // get files from destination director
+        let files = await readdirSync(resolve(DEST_DIR))
 
-    // assign user input to prompt variable
-    const messageInput = input
-    let promptText = `${messageInput}\n\n`
+        // assign user input to prompt variable
+        const messageInput = input
+        var promptText = `Reference tables and columns below: ${messageInput}\n\n`
+
+        for(var i = 0; i < files.length; i++){
+
+            // Reformat filenames capitalize/concatenate and append to prompt text
+            // Read column values from files
+            if(files[i] != '.DS_Store'){
+                var capFilename = files[i].charAt(0).toUpperCase() + files[i].slice(1)
+                promptText += `\nTable:${capFilename.split('.')[0]} Columns:[${readFileSync(`${DEST_DIR}/${files[i].toString()}`).toString('utf8')}]`
+            }
 
 
-    for(var i = 0; i < files.length; i++){
+        }
 
-        // Reformat filenames capitalize/concatenate and append to prompt text
-        // Read column values from files
-        let capFilename = files[i].charAt(0).toUpperCase() + files[i].slice(1)
-        promptText += `\nTable:${capFilename.split('.')[0]} Columns:[${readFileSync(`${DEST_DIR}/${files[i]}`).toString()}]`
+        // Pass promptText variable to createCompletion `prompt` option
+        const opai = new OpenAIApi(config)
+        const req = await opai.createCompletion({
+            model: OPEN_AI_MODEL,
+            prompt: promptText.concat(" ,with a witty closing message after the query"),
+            max_tokens: 128,
+            temperature: 0.2
+        })
+
+
+        return req.data.choices[0].text
+    }
+    catch(error) {
 
     }
 
-    // Pass promptText variable to createCompletion `prompt` option
-    const opai = new OpenAIApi(config)
-    const req = await opai.createCompletion({
-        model: OPEN_AI_MODEL,
-        prompt: promptText.concat(" ,with a witty closing message after the query"),
-        max_tokens: 128,
-        temperature: 0.2
-    })
-    return req.data.choices[0].text
 }
 
 const run = async (msg:String) => {
     try {
+        console.log("\n")
         const res = await getAnswers(msg.toString())
         console.log(`\n=======\n\nSQL Query: ${res}\n=======`)
     }
@@ -107,7 +125,7 @@ const run = async (msg:String) => {
 
 // create cli user input interface
 const rl = readline.createInterface({input,output})
-const answer = rl.question(`${emoj.get('👨🏾‍💻')} Tell me how I should write this query? `).then(e => {
+const answer = rl.question(`${emoj.get('👨🏾‍💻')} Tell me how I should write this query? \n`).then(e => {
     run(e).then(response => {
         console.log(`${emoj.get('😉')} Done!`)
         rl.close()
