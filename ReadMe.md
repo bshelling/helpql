@@ -9,6 +9,19 @@ $ npm i
 $ # Add csv files to source folder prior to executing next command
 $ npm run build:run
 ```
+-- This application requires OpenAI credientials to perform the request
+[Open AI API Reference](https://beta.openai.com/docs/api-reference/introduction)
+
+```
+/**
+ * Open AI
+ */
+const config = new Configuration({
+    organization: process.env.ORG,
+    apiKey: process.env.API_KEY
+})
+
+```
 
 ### Expected behavior
 ```
